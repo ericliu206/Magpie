@@ -7,7 +7,7 @@ project(Magpie)
 # Source files
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib")
-set(SOURCES "${SRC_DIR}/main.cpp" "${SRC_DIR}/input.cpp")
+set(SOURCES "${SRC_DIR}/main.cpp" "${SRC_DIR}/input.cpp" "${SRC_DIR}/display.cpp")
 
 # Executable definition and properties
 add_executable(${PROJECT_NAME} ${SOURCES})

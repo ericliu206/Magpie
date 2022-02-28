@@ -3,6 +3,7 @@
 
 #include "camera.h"
 #include "input.h"
+#include "display.h"
 
 #include <iostream>
 
@@ -11,6 +12,7 @@ float lastFrame = 0.0f;
 float deltaTime = 0.0f;
 
 int main(int argc, char ** argv) {
+    Magpie::Display* display = new Magpie::Display();
     Magpie::Camera* camera = new Magpie::Camera();
     Magpie::Input* input = new Magpie::Input(camera);
 
@@ -32,8 +34,12 @@ int main(int argc, char ** argv) {
         exit(1);
     }
 
+    display->Initialize();
+
     while (!SDL_QuitRequested()) {
         input->HandleInput(deltaTime);
+        display->SwitchToColorTexture();
+        display->Render();
         currentTime = (float)SDL_GetTicks()/1000;
         deltaTime = currentTime - lastFrame;
         lastFrame = currentTime;
@@ -43,6 +49,7 @@ int main(int argc, char ** argv) {
     SDL_GL_DeleteContext(context);
     SDL_Quit();
 
+    delete display;
     delete camera;
     delete input;
 
