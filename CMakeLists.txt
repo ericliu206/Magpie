@@ -8,7 +8,14 @@ set(GUI_NAME "MagpieGUI")
 # Source files
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib")
+set(INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(GUI_SOURCES "${SRC_DIR}/main.cpp" "${SRC_DIR}/input.cpp" "${SRC_DIR}/display.cpp")
+set(LIB_SOURCES "${SRC_DIR}/vec.cpp")
+
+# libMagpie
+add_library(${PROJECT_NAME} ${LIB_SOURCES})
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 11)
+target_include_directories(${PROJECT_NAME} PRIVATE "${INCLUDE_DIR}")
 
 # Executable definition and properties
 add_executable(${GUI_NAME} ${GUI_SOURCES})
@@ -16,6 +23,8 @@ set_property(TARGET ${GUI_NAME} PROPERTY CXX_STANDARD 11)
 # Set name of GUI executable to be "Magpie"
 set_property(TARGET ${GUI_NAME} PROPERTY OUTPUT_NAME ${PROJECT_NAME})
 target_include_directories(${GUI_NAME} PRIVATE "${SRC_DIR}")
+target_include_directories(${GUI_NAME} PRIVATE "${INCLUDE_DIR}")
+target_link_libraries(${GUI_NAME} PRIVATE ${PROJECT_NAME})
 
 # SDL
 set(SDL_DIR "${LIB_DIR}/SDL")
@@ -38,4 +47,6 @@ target_link_libraries(${GUI_NAME} PRIVATE "glad")
 set(GLM_DIR "${LIB_DIR}/glm")
 add_subdirectory(${GLM_DIR})
 target_include_directories(${GUI_NAME} PRIVATE "${GLM_DIR}/glm")
+target_link_libraries(${GUI_NAME} PRIVATE "glm")
+target_include_directories(${PROJECT_NAME} PRIVATE ${GLM_DIR})
 target_link_libraries(${GUI_NAME} PRIVATE "glm")
