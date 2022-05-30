@@ -10,7 +10,9 @@ set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib")
 set(INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
 set(GUI_SOURCES "${SRC_DIR}/main.cpp" "${SRC_DIR}/input.cpp" "${SRC_DIR}/display.cpp")
-set(LIB_SOURCES "${SRC_DIR}/vec.cpp")
+set(LIB_SOURCES
+"${SRC_DIR}/mat.cpp"
+"${SRC_DIR}/vec.cpp")
 
 # libMagpie
 add_library(${PROJECT_NAME} ${LIB_SOURCES})
