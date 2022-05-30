@@ -15,13 +15,13 @@ void Magpie::Input::HandleInput(float deltaTime) {
         camera->pos += cameraSpeed * camera->front;
     }
     if (keyState[SDL_SCANCODE_A]) {
-        camera->pos -= glm::normalize(glm::cross(camera->front, camera->up)) * cameraSpeed;
+        camera->pos -= Magpie::Vector::Normalize(Magpie::Vector::Cross(camera->front, camera->up)) * cameraSpeed;
     }
     if (keyState[SDL_SCANCODE_S]) {
         camera->pos -= cameraSpeed * camera->front;
     }
     if (keyState[SDL_SCANCODE_D]) {
-        camera->pos += glm::normalize(glm::cross(camera->front, camera->up)) * cameraSpeed;
+        camera->pos += Magpie::Vector::Normalize(Magpie::Vector::Cross(camera->front, camera->up)) * cameraSpeed;
     }
     if (keyState[SDL_SCANCODE_ESCAPE]) {
         if (currentTime-lastEscapeTime >= 100) {
