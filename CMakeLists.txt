@@ -13,7 +13,8 @@ set(GUI_SOURCES "${SRC_DIR}/main.cpp" "${SRC_DIR}/input.cpp" "${SRC_DIR}/display
 set(LIB_SOURCES
 "${SRC_DIR}/mat.cpp"
 "${SRC_DIR}/vec.cpp"
-"${SRC_DIR}/angle.cpp")
+"${SRC_DIR}/angle.cpp"
+"${SRC_DIR}/pathtracer/pathtracer.cpp")
 
 # libMagpie
 add_library(${PROJECT_NAME} ${LIB_SOURCES})
