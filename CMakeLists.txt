@@ -14,6 +14,7 @@ set(LIB_SOURCES
 "${SRC_DIR}/mat.cpp"
 "${SRC_DIR}/vec.cpp"
 "${SRC_DIR}/angle.cpp"
+"${SRC_DIR}/scene.cpp"
 "${SRC_DIR}/pathtracer/pathtracer.cpp")
 
 # libMagpie
