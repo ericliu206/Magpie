@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mat.h"
+#include "scene.h"
 #include "angle.h"
 
 #include <string>
@@ -13,6 +14,7 @@ namespace Magpie {
             virtual void SetSky(std::string filename) = 0;
             virtual void SetDimensions(unsigned int width, unsigned int height);
             virtual void SetViewMatrix(Mat4 matrix);
+            virtual void LoadScene(Scene scene) = 0;
             virtual void Render() = 0;
             virtual float* GetPixels();
         protected:
