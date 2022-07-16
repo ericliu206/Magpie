@@ -15,7 +15,8 @@ set(LIB_SOURCES
 "${SRC_DIR}/vec.cpp"
 "${SRC_DIR}/angle.cpp"
 "${SRC_DIR}/scene.cpp"
-"${SRC_DIR}/pathtracer/pathtracer.cpp")
+"${SRC_DIR}/pathtracer/pathtracer.cpp"
+"${SRC_DIR}/pathtracer/opencl_pathtracer.cpp")
 
 # libMagpie
 add_library(${PROJECT_NAME} ${LIB_SOURCES})
@@ -48,9 +49,23 @@ target_include_directories("glad" PRIVATE "${GLAD_DIR}/include")
 target_include_directories(${GUI_NAME} PRIVATE "${GLAD_DIR}/include")
 target_link_libraries(${GUI_NAME} PRIVATE "glad")
 
+# OpenCL
+find_package(OpenCL)
+target_include_directories(${PROJECT_NAME} PRIVATE ${OpenCL_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PRIVATE ${OpenCL_LIBRARIES})
+# C++ bindings
+target_include_directories(${PROJECT_NAME} PRIVATE "${LIB_DIR}/OpenCL")
+
 # glm
 set(GLM_DIR "${LIB_DIR}/glm")
 add_subdirectory(${GLM_DIR})
 target_include_directories(${GUI_NAME} PRIVATE "${GLM_DIR}/glm")
 target_include_directories(${PROJECT_NAME} PRIVATE ${GLM_DIR})
 target_link_libraries(${GUI_NAME} PRIVATE "glm")
+
+# stb_image
+set(STB_DIR "${LIB_DIR}/stb_image")
+add_library("stb_image" "${STB_DIR}/stb_image.cpp")
+target_include_directories("stb_image" PRIVATE ${STB_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE ${STB_DIR})
+target_link_libraries(${PROJECT_NAME} PRIVATE "stb_image")

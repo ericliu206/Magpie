@@ -5,6 +5,15 @@
 #include "angle.h"
 
 #include <string>
+#include <vector>
+
+// forward declare OpenCL classes
+namespace cl {
+    class Context;
+    class CommandQueue;
+    template<typename... Ts> class KernelFunctor;
+    class Buffer;
+}
 
 namespace Magpie {
     class PathTracer {
@@ -22,5 +31,22 @@ namespace Magpie {
             Mat4 view;
             Mat4 projection = Matrix::Perspective(Radians(45.0f), (float)width / height, 0.1f, 100.0f);
             float* pixels;
+    };
+
+    class OpenCLPathTracer : public PathTracer {
+        public:
+            ~OpenCLPathTracer();
+            void Initialize();
+            void SetSky(std::string filename);
+            void LoadScene(Scene scene);
+            void Render();
+        private:
+            std::vector<float> frame;
+            cl::Context* context;
+            cl::CommandQueue* queue;
+            cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer>* raytrace;
+            cl::Buffer* skyBuffer;
+            cl::Buffer* deviceFrame;
+            cl::Buffer* sphereBuffer;
     };
 }
