@@ -129,6 +129,9 @@ void OpenCLPathTracer::SetSky(std::string filename){
 }
 
 void OpenCLPathTracer::LoadScene(Scene scene){
+    if (!scene.skyFilename.empty()) {
+        SetSky(scene.skyFilename);
+    }
     const std::vector<Vec4>& spheres = scene.GetSpheres();
     raytrace->getKernel().setArg(6, spheres.size());
     sphereBuffer = new cl::Buffer(*context, spheres.begin(), spheres.end() , true);

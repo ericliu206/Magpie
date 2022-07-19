@@ -69,3 +69,10 @@ add_library("stb_image" "${STB_DIR}/stb_image.cpp")
 target_include_directories("stb_image" PRIVATE ${STB_DIR})
 target_include_directories(${PROJECT_NAME} PRIVATE ${STB_DIR})
 target_link_libraries(${PROJECT_NAME} PRIVATE "stb_image")
+
+# yaml-cpp
+set(YAML_DIR "${LIB_DIR}/yaml-cpp")
+add_subdirectory(${YAML_DIR})
+target_include_directories("yaml-cpp" PRIVATE "${YAML_DIR}/include")
+target_include_directories(${PROJECT_NAME} PRIVATE "${YAML_DIR}/include")
+target_link_libraries(${PROJECT_NAME} PRIVATE "yaml-cpp")
