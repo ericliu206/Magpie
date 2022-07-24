@@ -44,9 +44,10 @@ namespace Magpie {
             std::vector<float> frame;
             cl::Context* context;
             cl::CommandQueue* queue;
-            cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer>* raytrace;
+            cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer>* raytrace;
             cl::Buffer* skyBuffer;
             cl::Buffer* deviceFrame;
             cl::Buffer* sphereBuffer;
+            cl::Buffer* triangleBuffer;
     };
 }
