@@ -35,6 +35,15 @@ RayHit create_ray_hit() {
     return hit;
 }
 
+void intersect_ground_plane(Ray ray, RayHit* hit) {
+    float t = -ray.origin.y / ray.direction.y;
+    if (t > 0 && t < hit->distance) {
+        hit->distance = t;
+        hit->position = ray.origin + t * ray.direction;
+        hit->normal = (float3)(0.0f, 1.0f, 0.0f);
+    }
+}
+
 void intersect_sphere(Ray ray, RayHit* hit, float4 sphere) {
     float3 d = ray.origin - sphere.xyz;
     float p1 = -dot(ray.direction, d);
@@ -68,8 +77,9 @@ int intersect_triangle(Ray ray, float3 vert0, float3 vert1, float3 vert2, float*
     return 1;
 }
 
-RayHit trace(Ray ray, __global float4* spheres, int numSpheres, __global Triangle* triangles, int numTriangles) {
+RayHit trace(Ray ray, int ground, __global float4* spheres, int numSpheres, __global Triangle* triangles, int numTriangles) {
     RayHit bestHit = create_ray_hit();
+    if (ground) intersect_ground_plane(ray, &bestHit);
     for (int i = 0; i < numSpheres; i++) {
         intersect_sphere(ray, &bestHit, spheres[i]);
     }
@@ -112,6 +122,7 @@ __kernel void raytrace(__global const Ray* rays,
                        __global float4* frame, 
                        __global float4* spheres, 
                        __global Triangle* triangles, 
+                       int ground, 
                        int skyWidth, 
                        int skyHeight,
                        int numSpheres, 
@@ -122,7 +133,7 @@ __kernel void raytrace(__global const Ray* rays,
     Ray r = rays[gid];
     frame[gid] = (float4)(0.0f);
     for (int i = 0; i < 8; i++) {
-        RayHit hit = trace(r, spheres, numSpheres, triangles, numTriangles);
+        RayHit hit = trace(r, ground, spheres, numSpheres, triangles, numTriangles);
         frame[gid] += (float4)(r.energy, 1.0f) * shade(sky, skyWidth, skyHeight, &r, hit);
         if (r.energy.r == 0.0f || r.energy.g == 0.0f || r.energy.b == 0.0f) {
             break;
@@ -158,8 +169,8 @@ void OpenCLPathTracer::SetSky(std::string filename){
         int pos = i*nrChannels;
         skyData[i] = Vec4(*(data+pos)/255.0f, *(data+pos+1)/255.0f, *(data+pos+2)/255.0f, 1.0f);
     }
-    raytrace->getKernel().setArg(5, skyWidth);
-    raytrace->getKernel().setArg(6, skyHeight);
+    raytrace->getKernel().setArg(6, skyWidth);
+    raytrace->getKernel().setArg(7, skyHeight);
     skyBuffer = new cl::Buffer(*context, skyData.begin(), skyData.end(), true);
     stbi_image_free(data);
 }
@@ -168,8 +179,11 @@ void OpenCLPathTracer::LoadScene(Scene scene){
     if (!scene.skyFilename.empty()) {
         SetSky(scene.skyFilename);
     }
+
+    raytrace->getKernel().setArg(5, scene.ground);
+
     const std::vector<Vec4>& spheres = scene.GetSpheres();
-    raytrace->getKernel().setArg(7, spheres.size());
+    raytrace->getKernel().setArg(8, spheres.size());
     sphereBuffer = new cl::Buffer(*context, spheres.begin(), spheres.end() , true);
     
     const std::vector<Vec3>& triangles = scene.GetTriangles();
@@ -178,7 +192,7 @@ void OpenCLPathTracer::LoadScene(Scene scene){
     for (int i = 0; i < triangles.size(); i++) {
         triangleData[i] = Vec4(triangles[i].x ,triangles[i].y ,triangles[i].z , 0.0f);
     }
-    raytrace->getKernel().setArg(8, triangleData.size());
+    raytrace->getKernel().setArg(9, triangleData.size());
     triangleBuffer = new cl::Buffer(*context, triangleData.begin(), triangleData.end() , true);
 }
 

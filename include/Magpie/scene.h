@@ -9,6 +9,7 @@ namespace Magpie {
     class Scene {
         public:
             std::string skyFilename;
+            bool ground;
             const std::vector<Vec4>& GetSpheres();
             const std::vector<Vec3>& GetTriangles();
             void AddSphere(Vec3 center, float radius);

@@ -57,6 +57,7 @@ Scene Magpie::LoadSceneFromFile(std::string file) {
     Scene scene;
     YAML::Node sceneData = YAML::LoadFile(file);
     scene.skyFilename = sceneData["sky"].as<std::string>();
+    scene.ground = sceneData["ground"].as<bool>();
     YAML::Node sphereData = sceneData["spheres"];
     for (std::size_t i = 0; i < sphereData.size(); i++) {
         Vec4 sphere = sphereData[i].as<Vec4>();
