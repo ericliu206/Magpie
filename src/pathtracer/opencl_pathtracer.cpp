@@ -123,6 +123,7 @@ __kernel void raytrace(__global const Ray* rays,
                        __global float4* spheres, 
                        __global Triangle* triangles, 
                        int ground, 
+                       float4 directionalLight, 
                        int skyWidth, 
                        int skyHeight,
                        int numSpheres, 
@@ -169,8 +170,8 @@ void OpenCLPathTracer::SetSky(std::string filename){
         int pos = i*nrChannels;
         skyData[i] = Vec4(*(data+pos)/255.0f, *(data+pos+1)/255.0f, *(data+pos+2)/255.0f, 1.0f);
     }
-    raytrace->getKernel().setArg(6, skyWidth);
-    raytrace->getKernel().setArg(7, skyHeight);
+    raytrace->getKernel().setArg(7, skyWidth);
+    raytrace->getKernel().setArg(8, skyHeight);
     skyBuffer = new cl::Buffer(*context, skyData.begin(), skyData.end(), true);
     stbi_image_free(data);
 }
@@ -181,9 +182,13 @@ void OpenCLPathTracer::LoadScene(Scene scene){
     }
 
     raytrace->getKernel().setArg(5, scene.ground);
+    raytrace->getKernel().setArg(6, Vec4(scene.directionalLight.direction.x, 
+                                         scene.directionalLight.direction.y, 
+                                         scene.directionalLight.direction.z, 
+                                         scene.directionalLight.intensity));
 
     const std::vector<Vec4>& spheres = scene.GetSpheres();
-    raytrace->getKernel().setArg(8, spheres.size());
+    raytrace->getKernel().setArg(9, spheres.size());
     sphereBuffer = new cl::Buffer(*context, spheres.begin(), spheres.end() , true);
     
     const std::vector<Vec3>& triangles = scene.GetTriangles();
@@ -192,7 +197,7 @@ void OpenCLPathTracer::LoadScene(Scene scene){
     for (int i = 0; i < triangles.size(); i++) {
         triangleData[i] = Vec4(triangles[i].x ,triangles[i].y ,triangles[i].z , 0.0f);
     }
-    raytrace->getKernel().setArg(9, triangleData.size());
+    raytrace->getKernel().setArg(10, triangleData.size());
     triangleBuffer = new cl::Buffer(*context, triangleData.begin(), triangleData.end() , true);
 }
 

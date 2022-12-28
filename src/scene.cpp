@@ -58,6 +58,8 @@ Scene Magpie::LoadSceneFromFile(std::string file) {
     YAML::Node sceneData = YAML::LoadFile(file);
     scene.skyFilename = sceneData["sky"].as<std::string>();
     scene.ground = sceneData["ground"].as<bool>();
+    scene.directionalLight = DirectionalLight(sceneData["lights"]["directional"]["direction"].as<Vec3>(), 
+                                              sceneData["lights"]["directional"]["intensity"].as<float>());
     YAML::Node sphereData = sceneData["spheres"];
     for (std::size_t i = 0; i < sphereData.size(); i++) {
         Vec4 sphere = sphereData[i].as<Vec4>();

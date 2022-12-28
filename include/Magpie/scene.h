@@ -1,5 +1,6 @@
 #pragma once
 
+#include "light.h"
 #include "vec.h"
 
 #include <string>
@@ -10,6 +11,7 @@ namespace Magpie {
         public:
             std::string skyFilename;
             bool ground;
+            DirectionalLight directionalLight;
             const std::vector<Vec4>& GetSpheres();
             const std::vector<Vec3>& GetTriangles();
             void AddSphere(Vec3 center, float radius);
