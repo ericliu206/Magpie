@@ -4,7 +4,7 @@
 
 using namespace Magpie;
 
-// Convert between vectors and YAML
+// Convert between Magpie classes and YAML
 namespace YAML {
     template<>
     struct convert<Vec4> {
@@ -51,6 +51,26 @@ namespace YAML {
             return true;
         }
     };
+
+    template<>
+    struct convert<Material> {
+        static Node encode(const Material& m) {
+            Node node;
+            node["specular"] = m.specular;
+            node["albedo"] = m.albedo;
+            return node;
+        }
+
+        static bool decode(const Node& node, Material& m) {
+            if (!node["specular"] || !node["albedo"]) {
+                return false;
+            }
+
+            m.specular = node["specular"].as<Vec3>();
+            m.albedo = node["albedo"].as<Vec3>();
+            return true;
+        }
+    };
 }
 
 Scene Magpie::LoadSceneFromFile(std::string file) {
@@ -69,6 +89,10 @@ Scene Magpie::LoadSceneFromFile(std::string file) {
     for (std::size_t i = 0; i < triangleData.size(); i++) {
         scene.AddTriangle(triangleData[i][0].as<Vec3>(), triangleData[i][1].as<Vec3>(), triangleData[i][2].as<Vec3>());
     }
+    YAML::Node materialData = sceneData["materials"];
+    for (std::size_t i = 0; i < materialData.size(); i++) {
+        scene.AddMaterial(materialData[i].as<Material>());
+    }
     return scene;
 }
 
@@ -82,10 +106,18 @@ void Scene::AddTriangle(Vec3 a, Vec3 b, Vec3 c) {
     triangles.push_back(c);
 }
 
+void Scene::AddMaterial(Material material) {
+    materials.push_back(material);
+}
+
 const std::vector<Vec4>& Scene::GetSpheres() {
     return spheres;
 }
 
 const std::vector<Vec3>& Scene::GetTriangles() {
     return triangles;
+}
+
+const std::vector<Material>& Scene::GetMaterials() {
+    return materials;
 }
