@@ -144,6 +144,7 @@ __kernel void raytrace(__global const Ray* rays,
 )cl";
 
 OpenCLPathTracer::~OpenCLPathTracer() {
+    delete triangleBuffer;
     delete sphereBuffer;
     delete deviceFrame;
     delete skyBuffer;
