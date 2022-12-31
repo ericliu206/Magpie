@@ -82,12 +82,13 @@ Scene Magpie::LoadSceneFromFile(std::string file) {
                                               sceneData["lights"]["directional"]["intensity"].as<float>());
     YAML::Node sphereData = sceneData["spheres"];
     for (std::size_t i = 0; i < sphereData.size(); i++) {
-        Vec4 sphere = sphereData[i].as<Vec4>();
-        scene.AddSphere(Vec3(sphere.x, sphere.y, sphere.z), sphere.w);
+        Vec4 sphere = sphereData[i][0].as<Vec4>();
+        scene.AddSphere(Vec3(sphere.x, sphere.y, sphere.z), sphere.w, sphereData[i][1].as<int>());
     }
     YAML::Node triangleData = sceneData["triangles"];
     for (std::size_t i = 0; i < triangleData.size(); i++) {
-        scene.AddTriangle(triangleData[i][0].as<Vec3>(), triangleData[i][1].as<Vec3>(), triangleData[i][2].as<Vec3>());
+        scene.AddTriangle(triangleData[i][0][0].as<Vec3>(), triangleData[i][0][1].as<Vec3>(), triangleData[i][0][2].as<Vec3>(), 
+                          triangleData[i][1].as<int>());
     }
     YAML::Node materialData = sceneData["materials"];
     for (std::size_t i = 0; i < materialData.size(); i++) {
@@ -96,25 +97,32 @@ Scene Magpie::LoadSceneFromFile(std::string file) {
     return scene;
 }
 
-void Scene::AddSphere(Vec3 center, float radius) {
-    spheres.push_back(Vec4(center.x, center.y, center.z, radius));
+void Scene::AddSphere(Vec3 center, float radius, int materialIndex) {
+    Sphere s;
+    s.center = center;
+    s.radius = radius;
+    s.materialIndex = materialIndex;
+    spheres.push_back(s);
 }
 
-void Scene::AddTriangle(Vec3 a, Vec3 b, Vec3 c) {
-    triangles.push_back(a);
-    triangles.push_back(b);
-    triangles.push_back(c);
+void Scene::AddTriangle(Vec3 a, Vec3 b, Vec3 c, int materialIndex) {
+    Triangle t;
+    t.a = a;
+    t.b = b;
+    t.c = c;
+    t.materialIndex = materialIndex;
+    triangles.push_back(t);
 }
 
 void Scene::AddMaterial(Material material) {
     materials.push_back(material);
 }
 
-const std::vector<Vec4>& Scene::GetSpheres() {
+const std::vector<Sphere>& Scene::GetSpheres() {
     return spheres;
 }
 
-const std::vector<Vec3>& Scene::GetTriangles() {
+const std::vector<Triangle>& Scene::GetTriangles() {
     return triangles;
 }
 

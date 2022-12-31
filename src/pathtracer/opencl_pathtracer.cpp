@@ -19,13 +19,27 @@ typedef struct {
     float3 position;
     float distance;
     float3 normal;
+    float3 specular;
+    float3 albedo;
 } RayHit;
+
+typedef struct {
+    float3 center;
+    float radius;
+    int materialIndex;
+} Sphere;
 
 typedef struct {
     float3 a;
     float3 b;
     float3 c;
+    int materialIndex;
 } Triangle;
+
+typedef struct {
+    float3 specular;
+    float3 albedo;
+} Material;
 
 RayHit create_ray_hit() {
     RayHit hit;
@@ -35,19 +49,21 @@ RayHit create_ray_hit() {
     return hit;
 }
 
-void intersect_ground_plane(Ray ray, RayHit* hit) {
+void intersect_ground_plane(Ray ray, RayHit* hit, __global Material* materials) {
     float t = -ray.origin.y / ray.direction.y;
     if (t > 0 && t < hit->distance) {
         hit->distance = t;
         hit->position = ray.origin + t * ray.direction;
         hit->normal = (float3)(0.0f, 1.0f, 0.0f);
+        hit->specular = materials[0].specular;
+        hit->albedo = materials[0].albedo;
     }
 }
 
-void intersect_sphere(Ray ray, RayHit* hit, float4 sphere) {
-    float3 d = ray.origin - sphere.xyz;
+void intersect_sphere(Ray ray, RayHit* hit, Sphere sphere, __global Material* materials) {
+    float3 d = ray.origin - sphere.center;
     float p1 = -dot(ray.direction, d);
-    float p2sqr = p1 * p1 - dot(d, d) + sphere.w * sphere.w;
+    float p2sqr = p1 * p1 - dot(d, d) + sphere.radius * sphere.radius;
     if (p2sqr < 0)
         return;
     float p2 = sqrt(p2sqr);
@@ -55,7 +71,9 @@ void intersect_sphere(Ray ray, RayHit* hit, float4 sphere) {
     if (t > 0 && t < hit->distance) {
         hit->distance = t;
         hit->position = ray.origin + t * ray.direction;
-        hit->normal = normalize(hit->position - sphere.xyz);
+        hit->normal = normalize(hit->position - sphere.center);
+        hit->specular = materials[sphere.materialIndex].specular;
+        hit->albedo = materials[sphere.materialIndex].albedo;
     }
 }
 
@@ -77,11 +95,11 @@ int intersect_triangle(Ray ray, float3 vert0, float3 vert1, float3 vert2, float*
     return 1;
 }
 
-RayHit trace(Ray ray, int ground, __global float4* spheres, int numSpheres, __global Triangle* triangles, int numTriangles) {
+RayHit trace(Ray ray, int ground, __global Sphere* spheres, int numSpheres, __global Triangle* triangles, int numTriangles, __global Material* materials) {
     RayHit bestHit = create_ray_hit();
-    if (ground) intersect_ground_plane(ray, &bestHit);
+    if (ground) intersect_ground_plane(ray, &bestHit, materials);
     for (int i = 0; i < numSpheres; i++) {
-        intersect_sphere(ray, &bestHit, spheres[i]);
+        intersect_sphere(ray, &bestHit, spheres[i], materials);
     }
     for (int i = 0; i < numTriangles; i++) {
         float t;
@@ -90,6 +108,8 @@ RayHit trace(Ray ray, int ground, __global float4* spheres, int numSpheres, __gl
                 bestHit.distance = t;
                 bestHit.position = ray.origin + t * ray.direction;
                 bestHit.normal = normalize(cross(triangles[i].b - triangles[i].a, triangles[i].c - triangles[i].a));
+                bestHit.specular = materials[triangles[i].materialIndex].specular;
+                bestHit.albedo = materials[triangles[i].materialIndex].albedo;
             }
         }
     }
@@ -100,13 +120,12 @@ float3 reflect(float3 i, float3 n) {
     return i - 2 * n * dot(i, n);
 }
 
-float4 shade(__global const float4* sky, int skyWidth, int skyHeight, Ray* r, RayHit hit) {
+float4 shade(__global const float4* sky, int skyWidth, int skyHeight, float4 directionalLight, Ray* r, RayHit hit) {
     if (hit.distance < INFINITY) {
-        float3 specular = (float3)(0.75f, 0.75f, 0.75f);
         r->origin = hit.position + hit.normal * 0.001f;
         r->direction = reflect(r->direction, hit.normal);
-        r->energy *= specular;
-        return (float4)(0.0f, 0.0f, 0.0f, 0.0f);
+        r->energy *= hit.specular;
+        return (float4)(clamp(dot(hit.normal, directionalLight.xyz) * -1, 0.0f, 1.0f) * directionalLight.w * hit.albedo, 1.0f);
     } else {
         r->energy = (float3)(0.0f);
         float x = 0.5f * atan2pi(r->direction.x, r->direction.z);
@@ -120,8 +139,9 @@ float4 shade(__global const float4* sky, int skyWidth, int skyHeight, Ray* r, Ra
 __kernel void raytrace(__global const Ray* rays, 
                        __global const float4* sky, 
                        __global float4* frame, 
-                       __global float4* spheres, 
+                       __global Sphere* spheres, 
                        __global Triangle* triangles, 
+                       __global Material* materials, 
                        int ground, 
                        float4 directionalLight, 
                        int skyWidth, 
@@ -134,8 +154,8 @@ __kernel void raytrace(__global const Ray* rays,
     Ray r = rays[gid];
     frame[gid] = (float4)(0.0f);
     for (int i = 0; i < 8; i++) {
-        RayHit hit = trace(r, ground, spheres, numSpheres, triangles, numTriangles);
-        frame[gid] += (float4)(r.energy, 1.0f) * shade(sky, skyWidth, skyHeight, &r, hit);
+        RayHit hit = trace(r, ground, spheres, numSpheres, triangles, numTriangles, materials);
+        frame[gid] += (float4)(r.energy, 1.0f) * shade(sky, skyWidth, skyHeight, directionalLight, &r, hit);
         if (r.energy.r == 0.0f || r.energy.g == 0.0f || r.energy.b == 0.0f) {
             break;
         }
@@ -143,7 +163,31 @@ __kernel void raytrace(__global const Ray* rays,
 }
 )cl";
 
+// structs to work with OpenCL alignment
+struct OpenCLSphere {
+    Vec4 center;
+    float radius;
+    int materialIndex;
+    double pad;
+};
+
+struct OpenCLTriangle {
+    Vec4 a;
+    Vec4 b;
+    Vec4 c;
+    int materialIndex;
+    float pad1;
+    float pad2;
+    float pad3;
+};
+
+struct OpenCLMaterial {
+    Vec4 specular;
+    Vec4 albedo;
+};
+
 OpenCLPathTracer::~OpenCLPathTracer() {
+    delete materialBuffer;
     delete triangleBuffer;
     delete sphereBuffer;
     delete deviceFrame;
@@ -158,7 +202,7 @@ void OpenCLPathTracer::Initialize(){
     context = new cl::Context(CL_DEVICE_TYPE_DEFAULT);
     queue = new cl::CommandQueue(*context);
     cl::Program program(*context, kernelSource , true);
-    raytrace = new cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer>(program, "raytrace");
+    raytrace = new cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer>(program, "raytrace");
     deviceFrame = new cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(float) * width*height*4);
 }
 
@@ -171,8 +215,8 @@ void OpenCLPathTracer::SetSky(std::string filename){
         int pos = i*nrChannels;
         skyData[i] = Vec4(*(data+pos)/255.0f, *(data+pos+1)/255.0f, *(data+pos+2)/255.0f, 1.0f);
     }
-    raytrace->getKernel().setArg(7, skyWidth);
-    raytrace->getKernel().setArg(8, skyHeight);
+    raytrace->getKernel().setArg(8, skyWidth);
+    raytrace->getKernel().setArg(9, skyHeight);
     skyBuffer = new cl::Buffer(*context, skyData.begin(), skyData.end(), true);
     stbi_image_free(data);
 }
@@ -182,24 +226,43 @@ void OpenCLPathTracer::LoadScene(Scene scene){
         SetSky(scene.skyFilename);
     }
 
-    raytrace->getKernel().setArg(5, scene.ground);
-    raytrace->getKernel().setArg(6, Vec4(scene.directionalLight.direction.x, 
+    raytrace->getKernel().setArg(6, scene.ground);
+    raytrace->getKernel().setArg(7, Vec4(scene.directionalLight.direction.x, 
                                          scene.directionalLight.direction.y, 
                                          scene.directionalLight.direction.z, 
                                          scene.directionalLight.intensity));
 
-    const std::vector<Vec4>& spheres = scene.GetSpheres();
-    raytrace->getKernel().setArg(9, spheres.size());
-    sphereBuffer = new cl::Buffer(*context, spheres.begin(), spheres.end() , true);
-    
-    const std::vector<Vec3>& triangles = scene.GetTriangles();
-    // in OpenCL, 3-component vector data types are aligned to a 4 * sizeof(component) boundary
-    std::vector<Vec4> triangleData(triangles.size());
-    for (int i = 0; i < triangles.size(); i++) {
-        triangleData[i] = Vec4(triangles[i].x ,triangles[i].y ,triangles[i].z , 0.0f);
+    const std::vector<Sphere>& spheres = scene.GetSpheres();
+    raytrace->getKernel().setArg(10, spheres.size());
+    std::vector<OpenCLSphere> sphereData(spheres.size());
+    for (int i = 0; i < spheres.size(); i++) {
+        Sphere s = spheres[i];
+        sphereData[i].center = Vec4(s.center.x, s.center.y, s.center.z, 0.0f);
+        sphereData[i].radius = s.radius;
+        sphereData[i].materialIndex = s.materialIndex;
     }
-    raytrace->getKernel().setArg(10, triangleData.size());
+    sphereBuffer = new cl::Buffer(*context, sphereData.begin(), sphereData.end() , true);
+    
+    const std::vector<Triangle>& triangles = scene.GetTriangles();
+    std::vector<OpenCLTriangle> triangleData(triangles.size());
+    for (int i = 0; i < triangles.size(); i++) {
+        Triangle t = triangles[i];
+        triangleData[i].a = Vec4(t.a.x ,t.a.y ,t.a.z , 0.0f);
+        triangleData[i].b = Vec4(t.b.x ,t.b.y ,t.b.z , 0.0f);
+        triangleData[i].c = Vec4(t.c.x ,t.c.y ,t.c.z , 0.0f);
+        triangleData[i].materialIndex = t.materialIndex;
+    }
+    raytrace->getKernel().setArg(11, triangleData.size());
     triangleBuffer = new cl::Buffer(*context, triangleData.begin(), triangleData.end() , true);
+
+    const std::vector<Material>& materials = scene.GetMaterials();
+    std::vector<OpenCLMaterial> materialData(materials.size());
+    for (int i = 0; i < materials.size(); i++) {
+        Material m = materials[i];
+        materialData[i].specular = Vec4(m.specular.x, m.specular.y, m.specular.z, 0.0f);
+        materialData[i].albedo = Vec4(m.albedo.x, m.albedo.y, m.albedo.z, 0.0f);
+    }
+    materialBuffer = new cl::Buffer(*context, materialData.begin(), materialData.end(), true);
 }
 
 void OpenCLPathTracer::Render(){
@@ -217,7 +280,7 @@ void OpenCLPathTracer::Render(){
         rays[i+2] = Vec4(1.0f, 1.0f, 1.0f, 0.0f);
     }
     cl::Buffer rayBuffer(*context, rays.begin(), rays.end(), true);
-    (*raytrace)(cl::EnqueueArgs(*queue, cl::NDRange(width*height)), rayBuffer, *skyBuffer, *deviceFrame, *sphereBuffer, *triangleBuffer);
+    (*raytrace)(cl::EnqueueArgs(*queue, cl::NDRange(width*height)), rayBuffer, *skyBuffer, *deviceFrame, *sphereBuffer, *triangleBuffer, *materialBuffer);
     cl::copy(*queue, *deviceFrame, frame.begin(), frame.end());
     pixels = (float*)frame.data();
 }
